@@ -1,3 +1,6 @@
+#!/home/q/web/rest/venv/bin/python
+
+
 from flask import Flask, jsonify
 from flask.ext.restful import reqparse, abort, Api, Resource
 from flask.ext.mongoalchemy import MongoAlchemy
@@ -19,6 +22,7 @@ parser.add_argument('surname', type=str)
 parser.add_argument('state', type=str)
 parser.add_argument('change-balance', type=int)
 parser.add_argument('session', type=str)
+parser.add_argument('balance', type=int)
 
 def get_client(client_id):
 	if ClientModel.query.get(client_id) is None:
@@ -54,7 +58,6 @@ def login_required(session):
 			return True
 		abort (400, message = 'Session expired')
 	abort (403)
-		
 
 class ClientModel(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -63,10 +66,11 @@ class ClientModel(db.Model):
     state = db.Column(db.String(10))
     balance = db.Column(db.Integer)
     
-    def __init__(self, name, surname, state):
+    def __init__(self, name, surname, state, balance):
         self.name = name
         self.surname = name
         self.state = state
+        self.balance = balance
 
     def __repr__(self):
         return ('name: ' + self.name + ', state: ' + self.state)
@@ -75,25 +79,30 @@ class ClientModel(db.Model):
 		return {'id': self.id, 'name':self.name,'surname':self.surname, 'balance':self.balance, 'state':self.state}
 
 class Client(Resource):
-	#method_decorators=[authenticate]
 	def get(self, client_id):
 		return get_client(client_id).dict()
 
-	def delete(self, clienlot_id):
-		db.session.delete(get_client(client_id))
-		db.session.commit()
-		return '', 204
+	def delete(self, client_id):
+		args = parser.parse_args()
+		if (login_required(args['session'])):
+			db.session.delete(get_client(client_id))
+			db.session.commit()
+			return '', 204
+		return 403
 
 	def put(self, client_id):
-		abort_if_client_doesnt_exist(client_id)
 		args = parser.parse_args()
-		client = ClientModel.query.get(client_id)
-		client.state = args['state']
-		return client.dict()
+		if (login_required(args['session'])):
+			abort_if_client_doesnt_exist(client_id)
+			args = parser.parse_args()
+			client = ClientModel.query.get(client_id)
+			client.state = args['state']
+			return client.dict()
+		return 403
 
 class ClientsList(Resource):
-	#method_decorators=[authenticate]
 	def get(self):
+		method_decorators=[login_required]
 		args = parser.parse_args()
 		print login_required(args['session'])
 		if (login_required(args['session'])):
@@ -109,10 +118,12 @@ class ClientsList(Resource):
         
 	def post(self):
 		args = parser.parse_args()
-		client = ClientModel(name=args["name"], state=args["state"], surname=args["surname"])
-		db.session.add(client)
-		db.session.commit()
-		return client.dict(), 201
+		if (login_required(args['session'])):
+			client = ClientModel(name=args["name"], state=args["state"], surname=args["surname"], balance=args['balance'])
+			db.session.add(client)
+			db.session.commit()
+			return client.dict(), 201
+		abort(403)
 		
 class Login(Resource):
 	def get(self):
