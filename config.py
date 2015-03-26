@@ -1,7 +1,13 @@
+import os
+
 TOKEN_TTL = 3600
 FIRSTNAME_MAXLEN = 100
 SURNAME_MAXLEN = 100
 STATE_MAXLEN = 100
+USERNAME_MAXLEN = 100
+PASSWORD_HASH_MAXLEN = 100
 TOKEN_LEN = 30
 DEFAULT_PER_PAGE = 5
 DEFAULT_START_PAGE = 1
+DATABASE_URI = 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data.sqlite')
+COMMIT_ON_TEARDOWN = True
