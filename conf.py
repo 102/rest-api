@@ -8,6 +8,7 @@ USERNAME_MAXLEN = 100
 PASSWORD_HASH_MAXLEN = 100
 TOKEN_LEN = 30
 DEFAULT_PER_PAGE = 5
+MAX_PER_PAGE = 2
 DEFAULT_START_PAGE = 1
 DATABASE_URI = 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data.sqlite')
 COMMIT_ON_TEARDOWN = True

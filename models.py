@@ -1,6 +1,6 @@
 from flask.ext.sqlalchemy import SQLAlchemy
 from passlib.apps import custom_app_context as pwd_context
-from config import *
+from conf import *
 import random, time, string
 
 db = SQLAlchemy()
@@ -51,6 +51,13 @@ class ClientModel(db.Model):
     def delete(self):
         db.session.delete(self)
         db.session.commit()
+
+    @staticmethod    
+    def paginate_clients(page, per_page):
+		if not page: page = DEFAULT_START_PAGE
+		if not per_page: per_page = DEFAULT_PER_PAGE
+		if per_page > MAX_PER_PAGE: per_page = MAX_PER_PAGE
+		return ClientModel.query.paginate(page, per_page, True).items
     
     @staticmethod
     def get_client_by_id(client_id):
@@ -81,6 +88,6 @@ class Token(db.Model):
         token = Token.query.filter(Token.token == token).first()
         if (token):
             if (time.time() - token.start) < TOKEN_TTL:
-                return (True, None)
+                return (True, 'Success')
             else: return (False, 'Token expired')
         else: return (False, 'Unauthorized')

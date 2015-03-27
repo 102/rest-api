@@ -1,32 +1,35 @@
 import os
 from flask import Flask, jsonify
 from flask.ext.restful import reqparse, abort, Api, Resource
-from config import *
+from conf import *
 from models import *
 
 app = Flask(__name__)
-
-
 db.init_app(app)
 api = Api(app)
 
 parser = reqparse.RequestParser()
-parser.add_argument('name', type=str)
-parser.add_argument('pwd', type=str)
-parser.add_argument('surname', type=str)
-parser.add_argument('state', type=str)
-parser.add_argument('change-balance', type=int)
-parser.add_argument('token', type=str)
-parser.add_argument('balance', type=int)
-parser.add_argument('page', type=int)
-parser.add_argument('per-page', type=int)
+parser_args = {
+	'name': str,
+	'pwd': str,
+	'surname': str,
+	'state': str,
+	'change-balance': int,
+	'token': str,
+	'balance': int,
+	'page': int,
+	'per-page': int
+}
+for (key, value) in parser_args.items():
+	parser.add_argument(key, type=value)
 
 def get_client(client_id):
-    if ClientModel.get_client_by_id(client_id) is None:
-        abort(404, message="Client w/ id {} doesn't exist".format(client_id))
-    return ClientModel.query.get(client_id)
+	client = ClientModel.get_client_by_id(client_id)
+	if client is None:
+		abort(404, message="Client with id {} doesn't exist".format(client_id))
+	return client
 
-def login_required(token):
+def authorize(token):
 	t = Token.check_token(token)
 	if t[0]: return True
 	else: abort (403, message = t[1])
@@ -37,7 +40,7 @@ class Client(Resource):
 
 	def delete(self, client_id):
 		args = parser.parse_args()
-		if (login_required(args['token'])):
+		if (authorize(args['token'])):
 			try:
 				client = ClientModel.get_client_by_id(client_id)
 				client.delete()
@@ -48,7 +51,7 @@ class Client(Resource):
 
 	def put(self, client_id):
 		args = parser.parse_args()
-		if (login_required(args['token'])):
+		if (authorize(args['token'])):
 			abort_if_client_doesnt_exist(client_id)
 			client = ClientModel.query.get(client_id)
 			client.state = args['state']
@@ -58,15 +61,11 @@ class Client(Resource):
 class ClientsList(Resource):
 	def get(self):
 		args = parser.parse_args()
-		if (login_required(args['token'])):
+		if (authorize(args['token'])):
 			clientList = []
 			page = args['page']
 			per_page = args['per-page']
-			if not page:
-				page = DEFAULT_START_PAGE
-			if not per_page:
-				per_page = DEFAULT_PER_PAGE
-			for client in ClientModel.query.paginate(page, per_page, True).items:
+			for client in ClientModel.paginate_clients(page, per_page):
 				clientList.append(client.dict())
 			return {"clients": clientList}
 		else:
@@ -74,7 +73,7 @@ class ClientsList(Resource):
         
 	def post(self):
 		args = parser.parse_args()
-		if (login_required(args['token'])):
+		if (authorize(args['token'])):
 			client = ClientModel(name=args["name"], state=args["state"], surname=args["surname"], balance=args['balance'])
 			client.add()
 			return client.dict(), 201
@@ -107,9 +106,7 @@ class Login(Resource):
 		else:
 			abort (400, message = 'user ' + username + ' already registered')
 
-##########
-##ROUTES##
-##########
+#ROUTES#
 api.add_resource(ClientsList, '/clients')
 api.add_resource(Client, '/clients/<int:client_id>')
 api.add_resource(Login, '/login')
