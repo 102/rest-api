@@ -1,7 +1,9 @@
 from flask.ext.sqlalchemy import SQLAlchemy
 from passlib.apps import custom_app_context as pwd_context
 from conf import *
-import random, time, string
+import random
+import time
+import string
 
 db = SQLAlchemy()
 		
@@ -91,3 +93,68 @@ class Token(db.Model):
                 return (True, 'Success')
             else: return (False, 'Token expired')
         else: return (False, 'Unauthorized')
+        
+class Company(db.Model):
+	id = db.Column(db.Integer, primary_key=True)
+	userslist = db.Column(db.String)
+	
+	def __init__(self, userslist):
+		self.userslist = userslist
+		db.session.add(self)
+		db.session.commit()
+		
+	def dict(self):
+		return {'id': self.id, 'userslist': self.userslist}
+	
+	@staticmethod
+	def get_all():
+		comp_list = Company.query.all()
+		returnarr = []
+		for comp in comp_list:
+			returnarr.append({comp.id: comp.userslist})
+		return returnarr
+	
+		
+class Temp_ulist(db.Model):
+	id = db.Column(db.Integer, primary_key=True)
+	userslist = db.Column(db.String)
+	sid = db.Column(db.String(TOKEN_LEN))
+	
+	@staticmethod
+	def find_by_sid(sid):
+		return Temp_ulist.query.filter(Temp_ulist.sid == sid).first()
+	
+	def __init__(self, sid, name):
+		self.userslist = name
+		self.sid = sid
+		db.session.add(self)
+		db.session.commit()
+	
+	def append(self, string):
+		self.userslist += ', ' + string
+		db.session.add(self)
+		db.session.commit()
+		
+	def string(self):
+		return userslist
+		
+	def delete(self):
+		db.session.delete(self)
+		db.session.commit()
+		
+class SequenceID(db.Model):
+	id = db.Column(db.Integer, primary_key=True)
+	sequenceid = db.Column(db.String(TOKEN_LEN))
+
+	def __init__(self):
+		self.sequenceid = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(30))
+		db.session.add(self)
+		db.session.commit()
+
+	def delete(self):
+		db.session.delete(self)
+		db.session.commit()
+
+	@staticmethod
+	def find_sequence(sequenceid):
+		return SequenceID.query.filter(SequenceID.sequenceid == sequenceid).first()

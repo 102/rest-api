@@ -18,7 +18,9 @@ parser_args = {
 	'token': str,
 	'balance': int,
 	'page': int,
-	'per-page': int
+	'per-page': int,
+	'final': int,
+	'sid': str
 }
 for (key, value) in parser_args.items():
 	parser.add_argument(key, type=value)
@@ -106,10 +108,42 @@ class Login(Resource):
 		else:
 			abort (400, message = 'user ' + username + ' already registered')
 
+company = []
+companies = []
+class Companies(Resource):
+	def get(self):
+		return Company.get_all()
+		
+	def post(self):
+		global company
+		global companies
+		args = parser.parse_args()
+		name = args['name']
+		if not name:
+			abort (400, message = 'request should have user name')
+		if not args['sid'] and not args['final']:
+			sid = SequenceID()
+			ulist = Temp_ulist(sid.sequenceid, name)
+			return {'sid': sid.sequenceid, 'userslist': ulist.userslist}
+		if args['sid'] and not args['final']:
+			ulist = Temp_ulist.find_by_sid(args['sid'])
+			ulist.append(name)
+			return {'sid': args['sid'], 'userslist': ulist.userslist}
+		if args['final']:
+			ulist = Temp_ulist.find_by_sid(args['sid'])
+			if not ulist:
+				abort (400, message = 'invalid sequence id')
+			comp = Company(ulist.userslist)
+			ulist.delete()
+			sid = SequenceID.find_sequence(args['sid'])
+			sid.delete()
+			return {'userslist': comp.userslist}
+
 #ROUTES#
 api.add_resource(ClientsList, '/clients')
 api.add_resource(Client, '/clients/<int:client_id>')
 api.add_resource(Login, '/login')
+api.add_resource(Companies, '/companies')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = COMMIT_ON_TEARDOWN
